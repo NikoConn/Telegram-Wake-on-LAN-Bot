@@ -32,8 +32,8 @@ To create a new bot, follow these steps:
 
 ### 2. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/telegram-wol-bot.git
-cd telegram-wol-bot
+git clone https://github.com/NikoConn/Telegram-Wake-on-LAN-Bot.git
+cd Telegram-Wake-on-LAN-Bot
 ```
 
 ### 3. Install Dependencies
