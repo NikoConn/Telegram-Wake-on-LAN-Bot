@@ -1,6 +1,7 @@
 import json
+import os
 
-DATA_FILE = "mac_registry.json"
+DATA_FILE = os.getenv("DATA_FILE", "mac_registry.json")
 
 def load_registry():
     """Load MAC address registry from a file."""
