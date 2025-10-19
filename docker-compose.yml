@@ -1,0 +1,10 @@
+services:
+  telegram-wol-bot:
+    build: .
+    container_name: telegram-wol-bot
+    restart: unless-stopped
+    network_mode: host  # Required for Wake-on-LAN to work on local network
+    environment:
+      - TELEGRAM_API_KEY=${TELEGRAM_API_KEY}
+    volumes:
+      - ./data:/app/data  # Persist MAC registry data

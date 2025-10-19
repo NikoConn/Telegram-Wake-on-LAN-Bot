@@ -49,12 +49,20 @@ def wake_device(update, context):
         update.message.reply_text("Usage: /wol <name>")
 
 def main():
-    # Load the API key from the API_KEY file
-    try:
-        with open("API_KEY", "r") as file:
-            api_key = file.read().strip()
-    except FileNotFoundError:
-        print("Error: API_KEY file not found.")
+    # Load the API key from environment or API_KEY file
+    import os
+    api_key = os.getenv("TELEGRAM_API_KEY")
+    
+    if not api_key:
+        try:
+            with open("API_KEY", "r") as file:
+                api_key = file.read().strip()
+        except FileNotFoundError:
+            print("Error: API_KEY file not found and TELEGRAM_API_KEY environment variable not set.")
+            return
+    
+    if not api_key:
+        print("Error: API key is empty.")
         return
 
     # Initialize the bot
