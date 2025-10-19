@@ -1,4 +1,5 @@
 import logging
+import os
 from telegram.ext import Updater, CommandHandler
 from wakeonlan import send_magic_packet
 from persistence import load_registry, save_registry
@@ -50,7 +51,6 @@ def wake_device(update, context):
 
 def main():
     # Load the API key from environment or API_KEY file
-    import os
     api_key = os.getenv("TELEGRAM_API_KEY")
     
     if not api_key:
