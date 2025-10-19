@@ -1,16 +1,43 @@
 import logging
 import os
-from telegram.ext import Updater, CommandHandler
+from telegram import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from wakeonlan import send_magic_packet
 from persistence import load_registry, save_registry
 
 # Load the MAC address registry
 mac_registry = load_registry()
 
+def build_keyboard_for_user(user_id):
+    """Build a ReplyKeyboardMarkup for a user including quick /wol buttons for their devices."""
+    buttons = []
+    # Fixed quick actions
+    buttons.append([KeyboardButton('/listmacs'), KeyboardButton('/addmac')])
+
+    user_id = str(user_id)
+    if user_id in mac_registry and mac_registry[user_id]:
+        # Add a button per device as /wol name
+        row = []
+        for name in mac_registry[user_id].keys():
+            # Keep rows of up to 3 buttons
+            row.append(KeyboardButton(f"/wol {name}"))
+            if len(row) >= 3:
+                buttons.append(row)
+                row = []
+        if row:
+            buttons.append(row)
+
+    # Add a close keyboard button
+    buttons.append([KeyboardButton('/close_menu')])
+
+    return ReplyKeyboardMarkup(buttons, one_time_keyboard=False, resize_keyboard=True)
+
+
 def start(update, context):
     update.message.reply_text(
-        "Hello! I'm a Wake-on-LAN bot. You can register devices with /addmac <name> <mac_address> "
-        "and wake up registered devices with /wol <name>. Your registry is private to your account."
+        "Hola! Soy un bot Wake-on-LAN. Registra dispositivos con /addmac <nombre> <mac_address> "
+        "y enciende dispositivos registrados con /wol <nombre>. Tu registro es privado.",
+        reply_markup=build_keyboard_for_user(update.message.from_user.id),
     )
 
 def add_mac(update, context):
@@ -24,17 +51,23 @@ def add_mac(update, context):
 
         mac_registry[user_id][name] = mac_address
         save_registry(mac_registry)
-        update.message.reply_text(f"MAC address '{mac_address}' registered as '{name}'.")
+        update.message.reply_text(
+            f"Dirección MAC '{mac_address}' registrada como '{name}'.",
+            reply_markup=build_keyboard_for_user(update.message.from_user.id),
+        )
     except IndexError:
-        update.message.reply_text("Usage: /addmac <name> <mac_address>")
+        update.message.reply_text("Uso: /addmac <nombre> <mac_address>")
 
 def list_macs(update, context):
     user_id = str(update.message.from_user.id)
     if user_id in mac_registry and mac_registry[user_id]:
         mac_list = "\n".join([f"{name}: {mac}" for name, mac in mac_registry[user_id].items()])
-        update.message.reply_text(f"Registered devices:\n{mac_list}")
+        update.message.reply_text(
+            f"Dispositivos registrados:\n{mac_list}",
+            reply_markup=build_keyboard_for_user(update.message.from_user.id),
+        )
     else:
-        update.message.reply_text("You have no registered devices.")
+        update.message.reply_text("No tienes dispositivos registrados.")
 
 def wake_device(update, context):
     user_id = str(update.message.from_user.id)
@@ -43,11 +76,46 @@ def wake_device(update, context):
         if user_id in mac_registry and name in mac_registry[user_id]:
             mac_address = mac_registry[user_id][name]
             send_magic_packet(mac_address)
-            update.message.reply_text(f"Sending Wake-on-LAN packet to '{name}' ({mac_address}).")
+            update.message.reply_text(f"Enviando paquete Wake-on-LAN a '{name}' ({mac_address}).")
         else:
-            update.message.reply_text(f"Device '{name}' not found. Use /listmacs to see registered devices.")
+            update.message.reply_text(f"Dispositivo '{name}' no encontrado. Usa /listmacs para ver los dispositivos registrados.")
     except IndexError:
-        update.message.reply_text("Usage: /wol <name>")
+        update.message.reply_text("Uso: /wol <nombre>")
+
+
+def close_menu(update, context):
+    update.message.reply_text("Menú cerrado.", reply_markup=ReplyKeyboardRemove())
+
+
+def handle_text_buttons(update, context):
+    """Handle text messages coming from the ReplyKeyboard buttons.
+
+    If the text starts with '/wol ' we'll call the same logic as the /wol command.
+    Otherwise, echo or suggest using /menu.
+    """
+    text = update.message.text.strip()
+
+    # Support buttons like '/wol name'
+    if text.startswith('/wol '):
+        # Create a fake context.args for wake_device
+        class Ctx:
+            args = text.split()[1:]
+
+        wake_device(update, Ctx)
+        # After action, refresh keyboard
+        update.message.reply_text('Listo.', reply_markup=build_keyboard_for_user(update.message.from_user.id))
+        return
+
+    if text == '/listmacs':
+        list_macs(update, context)
+        return
+
+    if text == '/addmac':
+        update.message.reply_text('Usa /addmac <nombre> <mac_address> para añadir un dispositivo.')
+        return
+
+    # Fallback
+    update.message.reply_text("Comando no reconocido. Usa /menu para ver opciones.")
 
 def main():
     # Load the API key from environment or API_KEY file
@@ -79,6 +147,10 @@ def main():
     dp.add_handler(CommandHandler("addmac", add_mac))
     dp.add_handler(CommandHandler("listmacs", list_macs))
     dp.add_handler(CommandHandler("wol", wake_device))
+    dp.add_handler(CommandHandler("close_menu", close_menu))
+
+    # Handle quick-reply button presses (they arrive as normal text messages)
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text_buttons))
 
     # Start the bot
     updater.start_polling()
