@@ -1,6 +1,6 @@
 import logging
 import os
-from telegram import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from telegram import ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from wakeonlan import send_magic_packet
 from persistence import load_registry, save_registry
@@ -26,9 +26,6 @@ def build_keyboard_for_user(user_id):
                 row = []
         if row:
             buttons.append(row)
-
-    # Add a close keyboard button
-    buttons.append([KeyboardButton('/close_menu')])
 
     return ReplyKeyboardMarkup(buttons, one_time_keyboard=False, resize_keyboard=True)
 
@@ -81,10 +78,6 @@ def wake_device(update, context):
             update.message.reply_text(f"Dispositivo '{name}' no encontrado. Usa /listmacs para ver los dispositivos registrados.")
     except IndexError:
         update.message.reply_text("Uso: /wol <nombre>")
-
-
-def close_menu(update, context):
-    update.message.reply_text("Menú cerrado.", reply_markup=ReplyKeyboardRemove())
 
 
 def handle_text_buttons(update, context):
@@ -147,7 +140,6 @@ def main():
     dp.add_handler(CommandHandler("addmac", add_mac))
     dp.add_handler(CommandHandler("listmacs", list_macs))
     dp.add_handler(CommandHandler("wol", wake_device))
-    dp.add_handler(CommandHandler("close_menu", close_menu))
 
     # Handle quick-reply button presses (they arrive as normal text messages)
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text_buttons))
