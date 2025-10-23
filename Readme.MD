@@ -110,6 +110,10 @@ Once your bot is running, you can send the following commands to it in a chat:
     /addmac Laptop 00:1A:2B:3C:4D:5E
     ```
 - /listmacs - Lists all registered devices for your user account.
+- /removemac <name> - Removes a registered device with the specified name. Example:
+    ```bash
+    /removemac Laptop
+    ```
 - /wol <name> - Sends a Wake-on-LAN packet to the registered device with the specified name. Example:
     ```bash
     /wol Laptop

@@ -12,7 +12,7 @@ def build_keyboard_for_user(user_id):
     """Build a ReplyKeyboardMarkup for a user including quick /wol buttons for their devices."""
     buttons = []
     # Fixed quick actions
-    buttons.append([KeyboardButton('/listmacs'), KeyboardButton('/addmac')])
+    buttons.append([KeyboardButton('/listmacs'), KeyboardButton('/addmac'), KeyboardButton('/removemac')])
 
     user_id = str(user_id)
     if user_id in mac_registry and mac_registry[user_id]:
@@ -32,8 +32,9 @@ def build_keyboard_for_user(user_id):
 
 def start(update, context):
     update.message.reply_text(
-        "Hello! I'm a Wake-on-LAN bot. Register devices with /addmac <name> <mac_address> "
-        "and wake registered devices with /wol <name>. Your registry is private.",
+        "Hello! I'm a Wake-on-LAN bot. Register devices with /addmac <name> <mac_address>, "
+        "wake registered devices with /wol <name>, and remove devices with /removemac <name>. "
+        "Your registry is private.",
         reply_markup=build_keyboard_for_user(update.message.from_user.id),
     )
 
@@ -79,6 +80,23 @@ def wake_device(update, context):
     except IndexError:
         update.message.reply_text("Usage: /wol <name>")
 
+def remove_mac(update, context):
+    user_id = str(update.message.from_user.id)
+    try:
+        name = context.args[0]
+        if user_id in mac_registry and name in mac_registry[user_id]:
+            mac_address = mac_registry[user_id][name]
+            del mac_registry[user_id][name]
+            save_registry(mac_registry)
+            update.message.reply_text(
+                f"Device '{name}' ({mac_address}) has been removed.",
+                reply_markup=build_keyboard_for_user(update.message.from_user.id),
+            )
+        else:
+            update.message.reply_text(f"Device '{name}' not found. Use /listmacs to see registered devices.")
+    except IndexError:
+        update.message.reply_text("Usage: /removemac <name>")
+
 
 def handle_text_buttons(update, context):
     """Handle text messages coming from the ReplyKeyboard buttons.
@@ -105,6 +123,10 @@ def handle_text_buttons(update, context):
 
     if text == '/addmac':
         update.message.reply_text('Use /addmac <name> <mac_address> to add a device.')
+        return
+
+    if text == '/removemac':
+        update.message.reply_text('Use /removemac <name> to remove a device.')
         return
 
     # Fallback
@@ -140,6 +162,7 @@ def main():
     dp.add_handler(CommandHandler("addmac", add_mac))
     dp.add_handler(CommandHandler("listmacs", list_macs))
     dp.add_handler(CommandHandler("wol", wake_device))
+    dp.add_handler(CommandHandler("removemac", remove_mac))
 
     # Handle quick-reply button presses (they arrive as normal text messages)
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text_buttons))
