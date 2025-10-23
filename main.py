@@ -32,8 +32,8 @@ def build_keyboard_for_user(user_id):
 
 def start(update, context):
     update.message.reply_text(
-        "Hola! Soy un bot Wake-on-LAN. Registra dispositivos con /addmac <nombre> <mac_address> "
-        "y enciende dispositivos registrados con /wol <nombre>. Tu registro es privado.",
+        "Hello! I'm a Wake-on-LAN bot. Register devices with /addmac <name> <mac_address> "
+        "and wake registered devices with /wol <name>. Your registry is private.",
         reply_markup=build_keyboard_for_user(update.message.from_user.id),
     )
 
@@ -49,22 +49,22 @@ def add_mac(update, context):
         mac_registry[user_id][name] = mac_address
         save_registry(mac_registry)
         update.message.reply_text(
-            f"Dirección MAC '{mac_address}' registrada como '{name}'.",
+            f"MAC address '{mac_address}' registered as '{name}'.",
             reply_markup=build_keyboard_for_user(update.message.from_user.id),
         )
     except IndexError:
-        update.message.reply_text("Uso: /addmac <nombre> <mac_address>")
+        update.message.reply_text("Usage: /addmac <name> <mac_address>")
 
 def list_macs(update, context):
     user_id = str(update.message.from_user.id)
     if user_id in mac_registry and mac_registry[user_id]:
         mac_list = "\n".join([f"{name}: {mac}" for name, mac in mac_registry[user_id].items()])
         update.message.reply_text(
-            f"Dispositivos registrados:\n{mac_list}",
+            f"Registered devices:\n{mac_list}",
             reply_markup=build_keyboard_for_user(update.message.from_user.id),
         )
     else:
-        update.message.reply_text("No tienes dispositivos registrados.")
+        update.message.reply_text("You don't have any registered devices.")
 
 def wake_device(update, context):
     user_id = str(update.message.from_user.id)
@@ -73,11 +73,11 @@ def wake_device(update, context):
         if user_id in mac_registry and name in mac_registry[user_id]:
             mac_address = mac_registry[user_id][name]
             send_magic_packet(mac_address)
-            update.message.reply_text(f"Enviando paquete Wake-on-LAN a '{name}' ({mac_address}).")
+            update.message.reply_text(f"Sending Wake-on-LAN packet to '{name}' ({mac_address}).")
         else:
-            update.message.reply_text(f"Dispositivo '{name}' no encontrado. Usa /listmacs para ver los dispositivos registrados.")
+            update.message.reply_text(f"Device '{name}' not found. Use /listmacs to see registered devices.")
     except IndexError:
-        update.message.reply_text("Uso: /wol <nombre>")
+        update.message.reply_text("Usage: /wol <name>")
 
 
 def handle_text_buttons(update, context):
@@ -96,7 +96,7 @@ def handle_text_buttons(update, context):
 
         wake_device(update, Ctx)
         # After action, refresh keyboard
-        update.message.reply_text('Listo.', reply_markup=build_keyboard_for_user(update.message.from_user.id))
+        update.message.reply_text('Done.', reply_markup=build_keyboard_for_user(update.message.from_user.id))
         return
 
     if text == '/listmacs':
@@ -104,11 +104,11 @@ def handle_text_buttons(update, context):
         return
 
     if text == '/addmac':
-        update.message.reply_text('Usa /addmac <nombre> <mac_address> para añadir un dispositivo.')
+        update.message.reply_text('Use /addmac <name> <mac_address> to add a device.')
         return
 
     # Fallback
-    update.message.reply_text("Comando no reconocido. Usa /menu para ver opciones.")
+    update.message.reply_text("Command not recognized. Use /menu to see options.")
 
 def main():
     # Load the API key from environment or API_KEY file
