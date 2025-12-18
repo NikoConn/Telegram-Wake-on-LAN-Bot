@@ -148,8 +148,8 @@ def main():
         print("Error: API key is empty.")
         return
 
-    # Initialize the bot
-    updater = Updater(api_key, use_context=True)
+    # Initialize the bot (disable job queue to reduce resource usage)
+    updater = Updater(api_key, use_context=True, use_job_queue=False)
     dp = updater.dispatcher
 
     # Configure logging
